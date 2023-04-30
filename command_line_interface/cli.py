@@ -1,3 +1,14 @@
+import os
+
+from pathlib import Path
+
+
+CWD = Path(os.getcwd())
+
+
+phone_list_path = CWD / 'phone_list.txt'
+
+
 phone_book = {}
 
 
@@ -7,6 +18,20 @@ change_commands = ['change']
 get_phone_commands = ['phone']
 get_all_commands = ['show all']
 exit_commnads = ['good bye', 'close', 'exit']
+
+
+# ----------File processing----------
+def get_phone_list(phone_list_path: Path) -> None:
+    with open(phone_list_path, 'r') as phone_list:
+        for line in phone_list:
+            phone_book.update({line.split(':')[0]: line.split(':')[1].strip()})
+
+def write_phone_list(phone_list_path: Path) -> None:
+    result = ''
+    with open(phone_list_path, 'w') as phone_list:
+        for k, v in phone_book.items():
+            result += f'{k}: {v}\n'
+        phone_list.write(result)
 
 
 # ----------Handlers----------
@@ -63,7 +88,7 @@ def get_phone(input_data: str) -> str:
 
 @ input_error
 def get_all() -> str:
-    result = '\n{:^31}\n{:^31}\n'.format('PHONE LIST', '-'*31)
+    result = '\n{:^31}\n{:^31}\n'.format('PHONE BOOK', '-'*31)
     if phone_book:
         for k, v in phone_book.items():
             result += '|{:^17}|{:^11}|\n{:^31}\n'.format(k, v, ('-'*31))
@@ -84,6 +109,9 @@ def commands_search(input_data: list, commands: list) ->list:
 
 # ----------Request-Respond----------
 def main() -> None:
+    if os.path.exists(phone_list_path):
+        get_phone_list(phone_list_path)
+    
     print(f'\nSupported functions:\n\n1. Add [Name] [Phone]\n2. Change [Name] [Phone]\n3. Phone [Name]\n4. Show all\n5. Exit\n')
     while True:
         
@@ -97,9 +125,11 @@ def main() -> None:
                 user_input = input('>>> ').strip()
                 
                 if commands_search(user_input, add_commands):   
-                    print(add_contact(user_input))           
+                    print(add_contact(user_input))
+                    write_phone_list(phone_list_path)         
                 elif commands_search(user_input, change_commands):          
-                   print(change_contact(user_input))                  
+                   print(change_contact(user_input))
+                   write_phone_list(phone_list_path)            
                 elif commands_search(user_input, get_phone_commands):                
                     print(get_phone(user_input))                  
                 elif commands_search(user_input, get_all_commands):                 
