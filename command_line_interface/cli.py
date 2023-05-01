@@ -11,13 +11,15 @@ phone_list_path = CWD / 'phone_list.txt'
 
 phone_book = {}
 
-
-start_commands = ['hello', 'start', 'hi']
-add_commands = ['add']
-change_commands = ['change']
-get_phone_commands = ['phone']
-get_all_commands = ['show all']
-exit_commnads = ['good bye', 'close', 'exit']
+# ----------Comand lists----------
+comands ={
+    'hello_command': ['hello', 'start', 'hi'],
+    'add_command': ['add'],
+    'change_command': ['change'],
+    'get_phone_command': ['phone'],
+    'get_all_command': ['show all'],
+    'exit_commnad': ['good bye', 'close', 'exit']
+}
 
 
 # ----------File processing----------
@@ -34,119 +36,131 @@ def write_phone_list(phone_list_path: Path) -> None:
         phone_list.write(result)
 
 
+# ----------Messages----------
+def start_message() ->str:
+    return '\nSupported functions:\n\n1. Add [Name] [Phone]\n2. Change [Name] [Phone]\n3. Phone [Name]\n4. Show all\n5. Exit\n\nSay hello to start\n'
+
+def hello_message() ->str:
+    return '\nHow can I help you?'
+
+def exit_message() ->str:
+    return '\nGood bye!'
+
+def unknown_command_message(command: str) ->str:
+    return f"\nI don't know '{command}' command("
+
+
+# ----------Data checking----------
+def name_checking(name: str) ->bool:
+    if len(name) < 16:
+        return True
+    
+def phone_number_checking(phone_number: str) ->bool:
+    if phone_number.isdigit() and len(phone_number) == 9:
+        return True
+    
+
 # ----------Handlers----------
 def input_error(func) -> str:
     def wrapper(*args, **kwargs):
         try:
             result = func(*args, **kwargs)
         except IndexError:
-            if func.__name__ == 'add_contact':
-                return '\nGive me name and phone, please\n'
-            if func.__name__ == 'change_contact':
-                return '\nGive me name and phone, please\n'
-            if func.__name__ == 'get_phone':
-                return '\nGive me name, please\n'
+            return '\nSomething wrong, try again\n'
         except KeyError:
             return f"\nI don't know this name(\n"
+        except TypeError:
+            return '\nSomething wrong, try again\n'
         else:
             return result
     return wrapper
 
 @ input_error   
-def add_contact(input_data: str) -> str:
-    if len(input_data.split()[1]) > 16:
-        return '\nName is too long. Must be less than 16 characters\n'
-    elif not input_data.split()[-1].isdigit():
-        return '\nPhone number must contain only numbers\n'
-    elif len(input_data.split()[-1]) != 9:
-        return '\nPhone number must contain 9 numbers\n'
+def add_contact(name: str, phone_number: str) -> str:
+    if name_checking(name):
+        if phone_number_checking(phone_number):
+            phone_book.update({name: phone_number})
+            write_phone_list(phone_list_path)
+            return f'\nPhone number [{phone_number}] with name "{name}" has been added!\nAnything else?\n'
+        else:
+            return f'\nPhone number must have only 9 digits\n'
     else:
-        phone_book.update({input_data.split()[1]: input_data.split()[-1]})
-        return f'\nPhone number [{input_data.split()[-1]}] with name "{input_data.split()[1]}" has been added!\nAnything else?\n'
-
+        return f'\nName must be less than 16 characters\n'
+        
 @ input_error
-def change_contact(input_data: str) -> str:
-    if phone_book:
-        if phone_book[input_data.split()[1]]:
-            old_number = phone_book[input_data.split()[1]]
-            if not input_data.split()[-1].isdigit():
-                return '\nPhone number must contain only numbers\n'
-            elif len(input_data.split()[-1]) != 9:
-                return '\nPhone number must contain 9 numbers\n'
-            else:
-                phone_book[input_data.split()[1]] = input_data.split()[-1]
-                return f'\nPhone number of "{input_data.split()[1]}" has been changed from [{old_number}] to [{input_data.split()[-1]}]\nAnything else?\n'
+def change_phone_number(name: str, new_phone_number: str) -> str:
+    if phone_number_checking(new_phone_number):
+        old_phone_number = phone_book[name]
+        phone_book[name] = new_phone_number
+        write_phone_list(phone_list_path)
+        return f'\nPhone number of "{name}" has been changed from [{old_phone_number}] to [{new_phone_number}]\nAnything else?\n'
     else:
-        return '\nPhone list is empty\nAnything else?\n'
+        return f'\nPhone number must have only 9 digits\n'
     
 @ input_error
-def get_phone(input_data: str) -> str:
+def get_phone_number(name: str) -> str:
     if phone_book:
-        return f'\n{input_data.split()[1]}: {phone_book[input_data.split()[1]]}\nAnything else?\n'
+        return f'\n{name}: {phone_book[name]}\nAnything else?\n'
     else:
-        return '\nPhone list is empty\nAnything else?\n'
+        return '\nPhone book is empty\nAnything else?\n'
 
 @ input_error
-def get_all() -> str:
+def get_all(_) -> str:
     result = '\n{:^31}\n{:^31}\n'.format('PHONE BOOK', '-'*31)
     if phone_book:
         for k, v in phone_book.items():
             result += '|{:^17}|{:^11}|\n{:^31}\n'.format(k, v, ('-'*31))
     else:
-        return '\nPhone list is empty\nAnything else?'
+        return '\nPhone book is empty\nAnything else?'
     
     return '{}\nAnything else?\n'.format(result)
 
 
 # ----------Parser----------
 @ input_error
-def commands_search(input_data: list, commands: list) ->list:
-    if input_data:
-        for i in commands:
-            if i == input_data[0:len(i)].lower():
-                return True
+def commands_search(input_comand: str, commands: dict) ->list:
+    for i in commands.keys():
+        for j in commands[i]:
+            if input_comand[0:len(j)].lower() == j:
+                return i
 
+commands_handler = {
+    'hello_command': hello_message,
+    'add_command': add_contact,
+    'change_command': change_phone_number,
+    'get_phone_command': get_phone_number,
+    'get_all_command': get_all,
+    'exit_commnad': exit_message
+    }
 
 # ----------Request-Respond----------
 def main() -> None:
     if os.path.exists(phone_list_path):
         get_phone_list(phone_list_path)
-    
-    print(f'\nSupported functions:\n\n1. Add [Name] [Phone]\n2. Change [Name] [Phone]\n3. Phone [Name]\n4. Show all\n5. Exit\n')
+
+    print(start_message())
+
     while True:
         
-        user_input = input('Say hello to start!\n>>> ').strip()
+        user_input = input('>>> ').strip()
         
-        if user_input.lower() in start_commands:
-            print('\nHow can I help you?')
-            
-            while True:
-                
-                user_input = input('>>> ').strip()
-                
-                if commands_search(user_input, add_commands):   
-                    print(add_contact(user_input))
-                    write_phone_list(phone_list_path)         
-                elif commands_search(user_input, change_commands):          
-                   print(change_contact(user_input))
-                   write_phone_list(phone_list_path)            
-                elif commands_search(user_input, get_phone_commands):                
-                    print(get_phone(user_input))                  
-                elif commands_search(user_input, get_all_commands):                 
-                    print(get_all())
-                elif user_input in exit_commnads:
-                    print('\nGood bye!')                
-                    return                  
-                else:
-                    print("I don't know this command(")
-
-        elif user_input.lower() in exit_commnads:   
-            print('\nGood bye!')
-            return     
+        command = commands_search(user_input, comands)
+        if command:
+            data = user_input.split(' ')[1:]        
+            if command != 'exit_commnad':
+                handler = commands_handler[command]
+                result = handler(*data)
+                print(result)
+            else:
+                handler = commands_handler[command]
+                result = handler()
+                print(result)
+                return
         else:
-            print('\nBad beginning, try again\n')                
+            print(unknown_command_message(user_input.split(' ')[0]))
 
 
 # ----------Entry point----------
 if __name__ == '__main__':
     main()
+    
